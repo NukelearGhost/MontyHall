@@ -61,14 +61,14 @@ def play_game():
             elif not door.chosen and not door.open:
                 door.togglechoice()
 
+    results = []
+
     # Determine victory or defeat
     for door in doors:
         if door.chosen and door.prize:
-            result = 'win'
+            results.append('win')
         else:
-            result = 'lose'
-
-    results = []
+            results.append('lose')
 
     for door in doors:
         results.append(door.open)
@@ -81,8 +81,7 @@ def play_game():
                             quotechar='\'',
                             quoting=csv.QUOTE_MINIMAL)
 
-        writer.writerow((result,
-                         results[0],
+        writer.writerow((results[0],
                          results[1],
                          results[2],
                          results[3],
@@ -91,6 +90,7 @@ def play_game():
                          results[6],
                          results[7],
                          results[8],
+                         results[9],
                          firstchoice + 1,
                          secondchoice
                          ))

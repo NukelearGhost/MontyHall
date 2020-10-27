@@ -1,7 +1,10 @@
 import multiprocessing
+from os import path
 from secrets import randbelow, randbits
 import csv
 import time
+import argparse
+
 
 class door:
     def __init__(self):
@@ -18,9 +21,10 @@ class door:
 
     def togglechoice(self):
         if self.chosen:
-            self.chosen = True
+            self.chosen = False
         else:
             self.chosen = True
+
 
 def generate_doors():
     doors = []
@@ -38,15 +42,9 @@ def generate_doors():
 def play_game():
     doors = generate_doors()
 
-    # Pick the first door.
+    # Pick first door
     firstchoice = randbelow(3)
-
-    # Decide whether to switch or stay.
-    secondchoice = bool(randbits(1))
-
-    # Select the first door.
     doors[firstchoice].togglechoice()
-    doors[firstchoice].open_door()
 
     # Find the door that has not been opened and does not contain the prize.
     for door in doors:
@@ -54,6 +52,8 @@ def play_game():
             door.open_door()
 
     # If switching doors, switch doors
+    secondchoice = bool(randbits(1))
+
     if secondchoice:
         for door in doors:
             if door.chosen:
@@ -80,6 +80,7 @@ def play_game():
                             delimiter=',',
                             quotechar='\'',
                             quoting=csv.QUOTE_MINIMAL)
+
         writer.writerow((result,
                          results[0],
                          results[1],
@@ -107,8 +108,8 @@ def speedtest(selection, runs):
     if selection == 'play':
         if selection == 'play':
             play_game()
-        elif selection=='analyze':
-            analyze_data(True)
+        elif selection == 'analyze':
+            analyze_data(suppress=True)
     one_run_end = time.time()
     print("Single Run Result: {}\n".format(one_run_end - one_run_start))
 
@@ -119,14 +120,13 @@ def speedtest(selection, runs):
         ten_run_start = time.time()
         if selection == 'play':
             play_game()
-        elif selection=='analyze':
-            analyze_data(True)
+        elif selection == 'analyze':
+            analyze_data(n, suppress=True)
         ten_run_end = time.time()
         ten_run_tot += (ten_run_end - ten_run_start)
         n -= 1
 
-    print("Ten Run Result: {}".format(ten_run_tot / 10))
-    print("Ten Run Total: {}\n".format(ten_run_tot))
+    print("Ten Run Avg: {}".format(ten_run_tot / 10))
 
     # Hundred Run
     hund_run_tot = 0
@@ -135,13 +135,12 @@ def speedtest(selection, runs):
         hundred_run_start = time.time()
         if selection == 'play':
             play_game()
-        elif selection=='analyze':
-            analyze_data(True)
+        elif selection == 'analyze':
+            analyze_data(n, suppress=True)
         n -= 1
         hundred_run_end = time.time()
         hund_run_tot += (hundred_run_end - hundred_run_start)
     print("Hundred Run Avg: {}".format(hund_run_tot / 100))
-    print("Hundred Run Total: {}\n".format(hund_run_tot))
 
     # Thousand Run
     thou_run_tot = 0
@@ -150,40 +149,18 @@ def speedtest(selection, runs):
         thousand_run_start = time.time()
         if selection == 'play':
             play_game()
-        elif selection=='analyze':
-            analyze_data(True)
+        elif selection == 'analyze':
+            analyze_data(n, suppress=True)
         n -= 1
         thousand_run_end = time.time()
         thou_run_tot += (thousand_run_end - thousand_run_start)
     print("Thousand Run Avg: {}".format(thou_run_tot / 1000))
-    print("Thousand Run Total: {}\n".format(thou_run_tot))
-
-    # N Run
-    n_tot = 0
-    n = runs
-    while n > 0:
-        n_start = time.time()
-        if selection == 'play':
-            play_game()
-        elif selection == 'analyze':
-            analyze_data(True)
-        n -= 1
-        n_end = time.time()
-        n_tot += (n_end - n_start)
-    print("N Run Result: {}".format(n_tot / runs))
-    print("N Run Total: {}\n".format(n_tot))
 
 
-def analyze_data(runs=0, suppress=False):
-    if runs:
-        y = runs
-
-        while y > 0:
-            play_game()
-            y -= 1
-
+def analyze_data(file='./results.csv', suppress=False):
+    # Analyze results from output of simulation
     results = []
-    with open('results.csv', 'r') as input:
+    with open(file, 'r') as input:
         reader = csv.reader(input,
                             delimiter=',',
                             quotechar='\''
@@ -221,12 +198,9 @@ def analyze_data(runs=0, suppress=False):
         if result[0] == 'win' and result[11] == 'False':
             win_noswitch += 1
 
-
     win_prob = round((wins/losses) * 100, 2)
     win_sw_prob = round((wins / switches) * 100, 2)
     win_ns_prob = round((wins / nonswitches) * 100, 2)
-
-
 
     if not suppress:
         print(
@@ -246,37 +220,73 @@ def analyze_data(runs=0, suppress=False):
             "+ Overall Win Probability: {}%\n\n".format(win_prob),
 
             # Other Stats
-            "+ Games Won because Switch: {}\t{}%\n".format(win_switch, round((win_switch / wins) * 100, 2)),
-            "+ Games Won because No Switch: {}\t{}%\n".format(win_noswitch, round((win_noswitch / wins) * 100, 2))
+            "+ Games won where door switched: {}\t{}%\n".format(
+                win_switch, round((win_switch / wins) * 100, 2)),
+            "+ Games won where door not switched: {}\t{}%\n".format(
+                win_noswitch, round((win_noswitch / wins) * 100, 2))
         )
+
 
 if __name__ == '__main__':
 
-    # Settings
-    i = 1 # 1 = Main, 2 = analyze, 3 = speed test
+    parser = argparse.ArgumentParser(
+        description='Test argparse and figure out how it works')
 
-    # Gameplay
-    n = 1000000 # Number of times to play the game (gets decremented)
-    x = n  # Static number of times to play the game
-    z = 10000 # Main will print out a status update every z runs
+    mode_group = parser.add_mutually_exclusive_group()
 
-    if i == 1:
+    mode_group.add_argument('-s', '--sim',
+                            metavar='n',
+                            type=int,
+                            action='store',
+                            nargs='?',
+                            const=1000,
+                            help="Run Montyhall Simulation"
+                            " n times (default 1000)")
+    mode_group.add_argument('-sps', '--speedsim',
+                            action='store_true',
+                            help="Test simulation speed without analysis")
+    mode_group.add_argument('-spa', '--speedana',
+                            action='store_true',
+                            help="Test simulation speed with analysis")
 
+    parser.add_argument('-a', '--analyze',
+                        metavar='FILE',
+                        type=str,
+                        action='store',
+                        nargs='?',
+                        const='./results.csv',
+                        help="Analyze results file (default ./results.csv")
+
+    # When run without arguments, use these.
+    parser.set_defaults(sim=1000, analyze="./results.csv")
+
+    args = parser.parse_args()
+
+    if args.sim:
         # Set header of datafile
-        header = "Result, Door1_open, Door1_chosen,Door1_prize, Door2_open, Door2_chosen," \
-                 "Door2_prize, Door3_open, Door3_chosen, Door3_prize, first pick, switch\n"
+        header = "Result, Door1_open, Door1_chosen, Door1_prize," \
+            "Door2_open, Door2_chosen,Door2_prize, Door3_open,"\
+            "Door3_chosen, Door3_prize, first pick, switch\n"
 
         with open('results.csv', 'w') as results:
             results.write(header)
 
+        # Gameplay
+        n = args.sim  # Number of times to play the game (gets decremented)
+        x = n  # Static number of times to play the game
+
+        print("Running simulation, please wait...\n\n")
+
         while n > 0:
-            if n % z == 0:
-                print(n)
             play_game()
             n -= 1
+    elif args.speedsim:
+        speedtest('play', args.speedsim)
+    elif args.speedana:
+        speedtest('analyze', args.speedana)
 
-    elif i == 2:
-        analyze_data()
-
-    elif i == 3:
-        speedtest('play', x)
+    if args.analyze:
+        if path.exists(args.analyze):
+            analyze_data(args.analyze)
+        elif not path.exists(args.analyze):
+            raise Exception("Unable to find file {}".format(args.analyze))

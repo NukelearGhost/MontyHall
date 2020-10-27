@@ -230,7 +230,10 @@ def analyze_data(file='./results.csv', suppress=False):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(
-        description='Test argparse and figure out how it works')
+        description='Simulate the Monty Hall Problem: '
+        'https://www.wikiwand.com/en/Monty_Hall_problem\n\n'
+        'Example: python MontyHall.py -s 10 -a',
+        formatter_class=argparse.RawTextHelpFormatter)
 
     mode_group = parser.add_mutually_exclusive_group()
 
@@ -255,10 +258,7 @@ if __name__ == '__main__':
                         action='store',
                         nargs='?',
                         const='./results.csv',
-                        help="Analyze results file (default ./results.csv")
-
-    # When run without arguments, use these.
-    parser.set_defaults(sim=1000, analyze="./results.csv")
+                        help="Analyze results file (default ./results.csv)")
 
     args = parser.parse_args()
 

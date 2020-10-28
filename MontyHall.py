@@ -198,7 +198,7 @@ def analyze_data(file='./results.csv', suppress=False):
         if result[0] == 'win' and result[11] == 'False':
             win_noswitch += 1
 
-    win_prob = round((wins/losses) * 100, 2)
+    win_prob = round((wins / losses) * 100, 2)
     win_sw_prob = round((wins / switches) * 100, 2)
     win_ns_prob = round((wins / nonswitches) * 100, 2)
 
